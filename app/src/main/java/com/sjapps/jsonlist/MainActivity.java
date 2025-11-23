@@ -482,6 +482,7 @@ public class MainActivity extends AppCompatActivity {
             hideToolbar();
             menuBtn.setVisibility(INVISIBLE);
             splitViewBtn.setVisibility(INVISIBLE);
+            saveBtn.setVisibility(INVISIBLE);
         }
         else {
             menuBtn.setVisibility(VISIBLE);
