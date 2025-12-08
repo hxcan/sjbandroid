@@ -354,7 +354,16 @@ public class AboutActivity extends AppCompatActivity {
             public void onResponse(String data) {
                 Type listType = new TypeToken<List<ReleaseNote>>() {}.getType();
 
-                List<ReleaseNote> releasesHistory = new Gson().fromJson(data, listType);
+                List<ReleaseNote> releasesHistory;
+                try {
+                    releasesHistory = new Gson().fromJson(data, listType);
+                }catch (Exception e){
+                    handler.post(() -> {
+                        Toast.makeText(AboutActivity.this, getResources().getText(R.string.fail_to_get_data), Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                    });
+                    return;
+                }
                 if (releasesHistory == null)
                     return;
 
