@@ -961,26 +961,30 @@ public class MainActivity extends AppCompatActivity {
 
         loadingStarted(getString(R.string.reading_file));
 
-        try {
-            InputStream inputStream = getContentResolver().openInputStream(uri);
-            AssetFileDescriptor fileDescriptor = getContentResolver().openAssetFileDescriptor(uri, "r");
-            if (fileDescriptor == null) {
-                fileCallback.onFileLoadFailed();
-                return;
-            }
+        readFileThread = new Thread(() -> {
+            try {
+                InputStream inputStream = getContentResolver().openInputStream(uri);
+                AssetFileDescriptor fileDescriptor = getContentResolver().openAssetFileDescriptor(uri, "r");
+                if (fileDescriptor == null) {
+                    handler.post(fileCallback::onFileLoadFailed);
+                    return;
+                }
 
-            String fileName = AndroidFileManager.getFileName(this,uri);
-            long fileSize = fileDescriptor.getLength();
+                String fileName = AndroidFileManager.getFileName(this,uri);
+                long fileSize = fileDescriptor.getLength();
 
-            fileDescriptor.close();
-            readFileThread = new Thread(() -> {
+                fileDescriptor.close();
+
                 fileManager.readFile(inputStream, fileName , fileSize, fileCallback);
-            });
-            readFileThread.setName("readFileThread");
-            readFileThread.start();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                handler.post(fileCallback::onFileLoadFailed);
+            }
+        });
+        readFileThread.setName("readFileThread");
+        readFileThread.start();
     }
 
     void WriteFile(Uri uri){
