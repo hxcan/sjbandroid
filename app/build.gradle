@@ -9,8 +9,8 @@ android {
         applicationId "com.sjapps.jsonlist"
         minSdk 23
         targetSdk 36
-        versionCode 51
-        versionName "1.8"
+        versionCode 55
+        versionName "1.8.3"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.generatedDensities = []
@@ -25,6 +25,10 @@ android {
         cruncherEnabled = false
     }
 
+    buildFeatures {
+        viewBinding true
+    }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -33,7 +37,7 @@ android {
         }
         debug {
             applicationIdSuffix '.debug'
-            versionNameSuffix ' dev 5'
+            versionNameSuffix ' dev 7'
         }
     }
     compileOptions {
