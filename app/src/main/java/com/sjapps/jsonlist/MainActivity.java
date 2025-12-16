@@ -115,6 +115,7 @@ public class MainActivity extends AppCompatActivity {
     boolean isMenuOpen;
     boolean isTopMenuVisible;
     boolean isEdited;
+    boolean isApplyingChanges;
     public boolean isEditMode;
     boolean unsavedChanges;
 
@@ -440,6 +441,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (isEdited){
                 loadingStarted(getString(R.string.applying_changes));
+                isApplyingChanges = true;
                 new Thread(() -> {
                     data.setRawData(JsonFunctions.convertToRawString(data.getRootList()));
                     handler.post(()->{
@@ -447,10 +449,12 @@ public class MainActivity extends AppCompatActivity {
                         isEdited = false;
                         rawJsonView.isRawJsonLoaded = false;
                         unsavedChanges = true;
+                        isApplyingChanges = false;
                         binding.saveBtn.setVisibility(VISIBLE);
                         if (rawJsonView.showJson){
                             rawJsonView.ShowJSON();
                         }
+                        showToolbar();
                     });
                 }).start();
 
@@ -617,6 +621,9 @@ public class MainActivity extends AppCompatActivity {
     private void showToolbar() {
         if (isEditMode)
             return;
+        if (isApplyingChanges)
+            return;
+
 
         binding.floatingToolbar.animate().cancel();
 
