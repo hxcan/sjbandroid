@@ -992,6 +992,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         loadingStarted(getString(R.string.saving_file));
+        hideToolbar();
 
         try {
             OutputStream outputStream = getContentResolver().openOutputStream(uri);
