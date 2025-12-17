@@ -265,6 +265,7 @@ public class JsonFunctions {
         if (val.equals("null")) return JsonNull.INSTANCE;
         if (val.equals("true")) return new JsonPrimitive(true);
         if (val.equals("false")) return new JsonPrimitive(false);
+        if (hasInvalidLeadingZero(val)) return new JsonPrimitive(val);
         if (val.matches("^\\d+\\.\\d+$")) return new JsonPrimitive(Double.parseDouble(item.getValue()));
         if (val.matches("^\\d+$")) return new JsonPrimitive(Long.parseLong(item.getValue()));
 
@@ -272,6 +273,19 @@ public class JsonFunctions {
 
     }
 
+    private static boolean hasInvalidLeadingZero(String val) {
+        if (val.length() < 2) return false;
+
+        if (val.charAt(0) == '-') {
+            return val.length() > 2 && val.charAt(1) == '0' && Character.isDigit(val.charAt(2));
+        }
+
+        if (val.charAt(0) == '0') {
+            char next = val.charAt(1);
+            return Character.isDigit(next);
+        }
+        return false;
+    }
 
     public static ArrayList<SearchItem> searchItem(JsonData data, String val){
         ArrayList<SearchItem> searchItems = new ArrayList<>();
