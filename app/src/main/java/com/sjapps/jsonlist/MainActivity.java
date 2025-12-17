@@ -1057,7 +1057,7 @@ public class MainActivity extends AppCompatActivity {
         hideToolbar();
 
         try {
-            OutputStream outputStream = getContentResolver().openOutputStream(uri);
+            OutputStream outputStream = getContentResolver().openOutputStream(uri,"wt");
 
             readFileThread = new Thread(() -> {
                 String dataStr = data.getRawData();
