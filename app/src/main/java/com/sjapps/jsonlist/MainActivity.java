@@ -998,7 +998,11 @@ public class MainActivity extends AppCompatActivity {
             OutputStream outputStream = getContentResolver().openOutputStream(uri);
 
             readFileThread = new Thread(() -> {
-                fileManager.writeFile(outputStream, data.getRawData(), fileWriteCallback);
+                String dataStr = data.getRawData();
+                if (dataStr.equals("-1"))
+                    dataStr = JsonFunctions.convertToRawString(data.getRootList());
+
+                fileManager.writeFile(outputStream, dataStr, fileWriteCallback);
             });
             readFileThread.setName("writeFileThread");
             readFileThread.start();
