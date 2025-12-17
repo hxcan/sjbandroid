@@ -118,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
     boolean isApplyingChanges;
     public boolean isEditMode;
     public boolean isLoading;
-    boolean unsavedChanges;
+    public boolean unsavedChanges;
 
     public Guideline guideline;
 
@@ -444,7 +444,8 @@ public class MainActivity extends AppCompatActivity {
                 loadingStarted(getString(R.string.applying_changes));
                 isApplyingChanges = true;
                 new Thread(() -> {
-                    data.setRawData(JsonFunctions.convertToRawString(data.getRootList()));
+                    if (!data.getRawData().equals("-1"))
+                        data.setRawData(JsonFunctions.convertToRawString(data.getRootList()));
                     handler.post(()->{
                         loadingFinished(true);
                         isEdited = false;
@@ -521,27 +522,17 @@ public class MainActivity extends AppCompatActivity {
             if (data.isEmptyPath()){
 
                 if (unsavedChanges){
-                    BasicDialog dialog = new BasicDialog();
-                    dialog.Builder(MainActivity.this, true)
-                            .setTitle(getString(R.string.save_changes))
-                            .setMessage(getString(R.string.unsaved_changes_msg))
-                            .setLeftButtonText(getString(R.string.dismiss))
-                            .setRightButtonText(getString(R.string.save))
+                    showUnsavedChangesDialog(new DialogButtonEvents() {
+                        @Override
+                        public void onLeftButtonClick() {
+                            MainActivity.this.finish();
+                        }
 
-                            .onButtonClick(new DialogButtonEvents() {
-                                @Override
-                                public void onLeftButtonClick() {
-                                    dialog.dismiss();
-                                    MainActivity.this.finish();
-                                }
-
-                                @Override
-                                public void onRightButtonClick() {
-                                    dialog.dismiss();
-                                    saveChanges();
-                                }
-                            })
-                            .show();
+                        @Override
+                        public void onRightButtonClick() {
+                            saveChanges();
+                        }
+                    });
                     return;
                 }
 
@@ -564,7 +555,43 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    private void saveChanges() {
+    public void showUnsavedChangesDialog(DialogButtonEvents buttonEvents){
+        BasicDialog dialog = new BasicDialog();
+        dialog.Builder(MainActivity.this, true)
+                .setTitle(getString(R.string.save_changes))
+                .setMessage(getString(R.string.unsaved_changes_msg))
+                .setLeftButtonText(getString(R.string.dismiss))
+                .setRightButtonText(getString(R.string.save))
+
+                .onButtonClick(new DialogButtonEvents() {
+                    @Override
+                    public void onLeftButtonClick() {
+                        dialog.dismiss();
+                        buttonEvents.onLeftButtonClick();
+                    }
+
+                    @Override
+                    public void onRightButtonClick() {
+                        dialog.dismiss();
+                        buttonEvents.onRightButtonClick();
+                    }
+                })
+                .show();
+    }
+
+    public void saveChanges() {
+        if ((readFileThread != null && readFileThread.isAlive())) {
+            if (readFileThread.getName().equals("writeFileThread"))
+                Snackbar.make(getWindow().getDecorView(), R.string.saving_file_in_progress, BaseTransientBottomBar.LENGTH_SHORT).show();
+            else Snackbar.make(getWindow().getDecorView(), R.string.loading_file_in_progress, BaseTransientBottomBar.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (isUrlSearching) {
+            Snackbar.make(getWindow().getDecorView(), R.string.loading_file_in_progress, BaseTransientBottomBar.LENGTH_SHORT).show();
+            return;
+        }
+
         fileManager.saveFile(data.getFileName());
     }
 
@@ -674,6 +701,23 @@ public class MainActivity extends AppCompatActivity {
     private void showUrlSearchView() {
         if ((readFileThread != null && readFileThread.isAlive()) || isUrlSearching) {
             Snackbar.make(getWindow().getDecorView(), R.string.loading_file_in_progress, BaseTransientBottomBar.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (unsavedChanges){
+            showUnsavedChangesDialog(new DialogButtonEvents() {
+                @Override
+                public void onLeftButtonClick() {
+                    unsavedChanges = false;
+                    binding.saveBtn.setVisibility(GONE);
+                    showUrlSearchView();
+                }
+
+                @Override
+                public void onRightButtonClick() {
+                    saveChanges();
+                }
+            });
             return;
         }
 
@@ -1015,6 +1059,9 @@ public class MainActivity extends AppCompatActivity {
             OutputStream outputStream = getContentResolver().openOutputStream(uri);
 
             readFileThread = new Thread(() -> {
+                if (data.getRawData().equals("-1"))
+                    data.setRawData(JsonFunctions.convertToRawString(data.getRootList()));
+
                 fileManager.writeFile(outputStream, data.getRawData(), fileWriteCallback);
             });
             readFileThread.setName("writeFileThread");
