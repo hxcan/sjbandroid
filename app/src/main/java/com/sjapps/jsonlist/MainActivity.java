@@ -89,6 +89,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -123,6 +126,9 @@ public class MainActivity extends AppCompatActivity {
     public Guideline guideline;
 
     ArrayList<String> filterList = new ArrayList<>();
+
+    private final ExecutorService searchExecutor = Executors.newSingleThreadExecutor();
+    private Future<?> searchTask;
 
     @Override
     protected void onResume() {
@@ -408,18 +414,38 @@ public class MainActivity extends AppCompatActivity {
 
     private void search(String string) {
 
+        if (searchTask != null && !searchTask.isDone()) {
+            searchTask.cancel(true);
+        }
+
         if (searchAdapter == null){
             searchAdapter = new SearchListAdapter(this, new ArrayList<>());
         }
 
-        ArrayList<SearchItem> searchItems;
-        if (string.isEmpty())
-            searchItems = new ArrayList<>();
-        else searchItems = JsonFunctions.searchItem(data,string);
+        if (string.isEmpty()){
+            searchAdapter.setSearchItems(new ArrayList<>());
+            searchAdapter.notifyDataSetChanged();
+            binding.searchingTxt.setVisibility(GONE);
+            return;
+        }
 
-        searchAdapter.setSearchItems(searchItems);
+        binding.searchingTxt.setVisibility(VISIBLE);
+        searchAdapter.setSearchItems(new ArrayList<>());
         searchAdapter.notifyDataSetChanged();
 
+        searchTask = searchExecutor.submit(()->{
+            ArrayList<SearchItem> result = JsonFunctions.searchItem(data,string);
+
+            if (Thread.currentThread().isInterrupted()){
+                return;
+            }
+
+            runOnUiThread(()->{
+                binding.searchingTxt.setVisibility(GONE);
+                searchAdapter.setSearchItems(result);
+                searchAdapter.notifyDataSetChanged();
+            });
+        });
     }
 
     private void toggleEdit() {
@@ -758,6 +784,9 @@ public class MainActivity extends AppCompatActivity {
         TransitionManager.beginDelayedTransition(binding.content, autoTransition);
         binding.mainLL.setVisibility(GONE);
         binding.searchLL.setVisibility(VISIBLE);
+        binding.menuBtn.setVisibility(INVISIBLE);
+        binding.splitViewBtn.setVisibility(INVISIBLE);
+        binding.titleTxt.setText(getString(R.string.search));
 
         if (binding.backBtn.getVisibility() == GONE)
             binding.backBtn.setVisibility(VISIBLE);
@@ -776,6 +805,10 @@ public class MainActivity extends AppCompatActivity {
         binding.searchLL.setVisibility(GONE);
         TransitionManager.beginDelayedTransition(binding.content, autoTransition);
         binding.mainLL.setVisibility(VISIBLE);
+        binding.menuBtn.setVisibility(VISIBLE);
+        binding.splitViewBtn.setVisibility(VISIBLE);
+        binding.titleTxt.setText(JsonData.getPathFormat(data.getPath()));
+
         binding.searchTxt.setText("");
 
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -916,6 +949,9 @@ public class MainActivity extends AppCompatActivity {
     public void showHidePathList() {
 
         if (isEditMode)
+            return;
+
+        if (binding.searchLL.getVisibility() == VISIBLE)
             return;
 
         if (binding.pathListBG.getVisibility() == VISIBLE) {
