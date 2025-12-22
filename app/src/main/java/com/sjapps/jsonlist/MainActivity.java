@@ -1057,13 +1057,14 @@ public class MainActivity extends AppCompatActivity {
         hideToolbar();
 
         try {
-            OutputStream outputStream = getContentResolver().openOutputStream(uri);
+            OutputStream outputStream = getContentResolver().openOutputStream(uri,"wt");
 
             readFileThread = new Thread(() -> {
-                if (data.getRawData().equals("-1"))
-                    data.setRawData(JsonFunctions.convertToRawString(data.getRootList()));
+                String dataStr = data.getRawData();
+                if (dataStr.equals("-1"))
+                    dataStr = JsonFunctions.convertToRawString(data.getRootList());
 
-                fileManager.writeFile(outputStream, data.getRawData(), fileWriteCallback);
+                fileManager.writeFile(outputStream, dataStr, fileWriteCallback);
             });
             readFileThread.setName("writeFileThread");
             readFileThread.start();
