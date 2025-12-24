@@ -68,6 +68,7 @@ public class SettingsActivity extends AppCompatActivity {
         binding.CheckForUpdateSwitch.setChecked(state.isAutoCheckForUpdate());
         binding.MIMESwitch.setChecked(state.isMIMEFilterDisabled());
         binding.sHighlightingSwitch.setChecked(state.isSyntaxHighlighting());
+        binding.scrollAnimationSwitch.setChecked(state.isScrollAnimation());
 
         binding.CheckForUpdateSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             state.setAutoCheckForUpdate(isChecked);
@@ -81,6 +82,11 @@ public class SettingsActivity extends AppCompatActivity {
 
         binding.sHighlightingSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             state.setSyntaxHighlighting(isChecked);
+            SaveData();
+        });
+
+        binding.scrollAnimationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            state.setScrollAnimation(isChecked);
             SaveData();
         });
 

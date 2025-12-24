@@ -38,6 +38,8 @@
     <string name="disable_MIME_description">If you have a problem with opening json files or the file is not with .json extension, disable the MIME filter</string>
     <string name="SHighlighting">Syntax Highlighting</string>
     <string name="SHighlighting_description">Syntax Highlighting for the raw JSON text</string>
+    <string name="scrollAnimation">Scroll Animation</string>
+    <string name="scrollAnimation_description">Disable this for large data, in may take very long time to animate the scroll</string>
     <string name="checking_for_update">Enable checking for update</string>
     <string name="beta">Beta</string>
 

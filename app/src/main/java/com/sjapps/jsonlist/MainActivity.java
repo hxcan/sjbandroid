@@ -711,7 +711,8 @@ public class MainActivity extends AppCompatActivity {
 
         if (previousPosition == -1) {
             handler.postDelayed(() -> {
-                binding.list.smoothScrollToPosition(data.getPreviousPos()+2);
+                if (state.isScrollAnimation()) binding.list.smoothScrollToPosition(data.getPreviousPos()+2);
+                else binding.list.scrollToPosition(data.getPreviousPos()+2);
                 adapter.setHighlightItem(data.getPreviousPos());
             }, 500);
             handler.postDelayed(() -> {
@@ -732,7 +733,8 @@ public class MainActivity extends AppCompatActivity {
 
     public void highlightItem(int id){
         handler.postDelayed(() -> {
-            binding.list.smoothScrollToPosition(id+2);
+            if (state.isScrollAnimation()) binding.list.smoothScrollToPosition(id+2);
+            else binding.list.scrollToPosition(id+2);
             adapter.setHighlightItem(id);
         }, 500);
         handler.postDelayed(() -> {
