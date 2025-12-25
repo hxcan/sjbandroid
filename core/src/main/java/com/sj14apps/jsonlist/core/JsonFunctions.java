@@ -134,10 +134,11 @@ public class JsonFunctions {
 
     static ArrayList<ListItem> getArrayList(ArrayList<ArrayList<ListItem>> list) {
         ArrayList<ListItem> newList = new ArrayList<>();
-        for (ArrayList<ListItem> lists : list) {
-            setId(lists, list.indexOf(lists));
-            newList.addAll(lists);
-            newList.add(new ListItem().Space());
+        ListItem space = new ListItem().Space();
+        for (int i = 0; i < list.size(); i++) {
+            setId(list.get(i), i);
+            newList.addAll(list.get(i));
+            newList.add(space);
         }
         return newList;
     }
@@ -164,7 +165,9 @@ public class JsonFunctions {
                 id = Integer.parseInt(pathString.substring(1, pathString.indexOf("}")));
             }
 
-            for (ListItem item : list) {
+            for (int i = 0; i < list.size(); i++){
+                ListItem item = list.get(i);
+
                 if (item.getName() == null || !item.getName().equals(id != -1 ? pathString.substring(pathString.indexOf("}") + 1) : pathString))
                     continue;
 
@@ -175,7 +178,7 @@ public class JsonFunctions {
                     list = getArrayList(item.getListObjects());
                     break;
                 }
-                list = list.get(list.indexOf(item)).getObjects();
+                list = list.get(i).getObjects();
                 if (list == null)
                     list = new ArrayList<>();
                 break;
@@ -262,16 +265,32 @@ public class JsonFunctions {
         String val = item.getValue();
 
         if (val == null) return new JsonPrimitive("");
-        if (val.equals("null")) return JsonNull.INSTANCE;
-        if (val.equals("true")) return new JsonPrimitive(true);
-        if (val.equals("false")) return new JsonPrimitive(false);
-        if (val.matches("^\\d+\\.\\d+$")) return new JsonPrimitive(Double.parseDouble(item.getValue()));
-        if (val.matches("^\\d+$")) return new JsonPrimitive(Long.parseLong(item.getValue()));
+        if ("null".equals(val)) return JsonNull.INSTANCE;
+        if ("true".equals(val)) return new JsonPrimitive(true);
+        if ("false".equals(val)) return new JsonPrimitive(false);
+        
+        if (hasInvalidLeadingZero(val)) return new JsonPrimitive(val);
+          
+        try { return new JsonPrimitive(Long.parseLong(val)); } catch (NumberFormatException ignored) {}
+        try { return new JsonPrimitive(Double.parseDouble(val)); } catch (NumberFormatException ignored) {}
 
         return new JsonPrimitive(item.getValue());
 
     }
 
+    private static boolean hasInvalidLeadingZero(String val) {
+        if (val.length() < 2) return false;
+
+        if (val.charAt(0) == '-') {
+            return val.length() > 2 && val.charAt(1) == '0' && Character.isDigit(val.charAt(2));
+        }
+
+        if (val.charAt(0) == '0') {
+            char next = val.charAt(1);
+            return Character.isDigit(next);
+        }
+        return false;
+    }
 
     public static ArrayList<SearchItem> searchItem(JsonData data, String val){
         ArrayList<SearchItem> searchItems = new ArrayList<>();
@@ -284,6 +303,10 @@ public class JsonFunctions {
     public static void searchItem(ArrayList<ListItem> list,ArrayList<SearchItem> searchItems, String path, String val,int searchMode,int currentID,int arrayId){
 
         for (ListItem item : list){
+            if (Thread.currentThread().isInterrupted()){
+                return;
+            }
+
             if (searchMode != 2 && item.getName() != null && item.getName().toLowerCase().contains(val)){
                 searchItems.add(new SearchItem(item.getName(),path,currentID,arrayId));
             }

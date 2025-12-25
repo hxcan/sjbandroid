@@ -5,6 +5,7 @@ public class AppState {
     boolean hasCrashLogs;
     boolean MIMEFilterDisabled;
     boolean syntaxHighlighting = true;
+    boolean scrollAnimation = true;
     boolean autoCheckForUpdate;
     private int theme;
 
@@ -38,6 +39,14 @@ public class AppState {
 
     public void setSyntaxHighlighting(boolean syntaxHighlighting) {
         this.syntaxHighlighting = syntaxHighlighting;
+    }
+
+    public boolean isScrollAnimation() {
+        return scrollAnimation;
+    }
+
+    public void setScrollAnimation(boolean scrollAnimation) {
+        this.scrollAnimation = scrollAnimation;
     }
 
     public boolean isAutoCheckForUpdate() {

@@ -38,6 +38,8 @@
     <string name="disable_MIME_description">If you have a problem with opening json files or the file is not with .json extension, disable the MIME filter</string>
     <string name="SHighlighting">Syntax Highlighting</string>
     <string name="SHighlighting_description">Syntax Highlighting for the raw JSON text</string>
+    <string name="scrollAnimation">Scroll Animation</string>
+    <string name="scrollAnimation_description">Disable this for large data, in may take very long time to animate the scroll</string>
     <string name="checking_for_update">Enable checking for update</string>
     <string name="beta">Beta</string>
 
@@ -69,6 +71,7 @@
     <string name="fail_to_load_file">Fail to load file!</string>
     <string name="fail_to_create_list">Fail to create list!</string>
     <string name="loading_file_in_progress">Loading file in progress, try again later</string>
+    <string name="saving_file_in_progress">Saving file in progress, try again later</string>
     <string name="file_is_to_large_to_be_shown_in_a_split_screen">File is to large to be shown in a split screen!</string>
 
     <string name="item_name">Item key</string>
@@ -86,10 +89,11 @@
     <!--  Release Notes  -->
     <string name="release_notes">Release Notes</string>
     <string name="fail_to_get_data">Fail to get data</string>
-  
+
     <!--  Search  -->
-    <string name="search">search</string>
-  
+    <string name="search">Search</string>
+    <string name="searching">Searching…</string>
+
     <!-- Editing -->
     <string name="editing_in_progress">Editing in progress</string>
     <string name="item_with_name_already_exists">Item with this name already exists!</string>
@@ -97,7 +101,7 @@
     <string name="editing_root_item_not_available">Editing a root item is not available!</string>
     <string name="rename_all">Rename all</string>
     <string name="rename_all_s_key_with_s">Rename all \'%s\' key with \'%s\'?</string>
-    
+    <string name="applying_changes">Applying changes…</string>
 
     <!--  Themes  -->
     <string name="theme">Theme</string>
@@ -108,4 +112,21 @@
         <item>Light</item>
         <item>Dark</item>
     </string-array>
+
+    <!--  Feedback  -->
+    <string name="feedback_dialog_title">We’d Love Your Feedback</string>
+    <string name="feedback_dialog_message">Tell us what you like, what doesn’t work, or what we should add next.</string>
+    <string name="send">Send</string>
+    <string name="select_category">Select category!</string>
+    <string name="empty_text_field">The text field is empty!</string>
+
+    <string-array name="feedback_categories">
+        <item>Select category</item>
+        <item>Bug Report</item>
+        <item>Feature Request</item>
+        <item>App Performance</item>
+        <item>Design &amp; User Interface</item>
+        <item>General Feedback</item>
+    </string-array>
+
 </resources>

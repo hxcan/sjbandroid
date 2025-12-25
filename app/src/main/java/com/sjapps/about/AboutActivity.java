@@ -1,6 +1,7 @@
 package com.sjapps.about;
 
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
@@ -10,12 +11,15 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.telecom.Call;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.widget.ImageView;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,15 +32,16 @@ import androidx.core.graphics.Insets;
 import androidx.core.text.HtmlCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.core.widget.NestedScrollView;
+
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.sj14apps.jsonlist.core.controllers.WebManager;
-import com.sjapps.jsonlist.MainActivity;
 import com.sjapps.jsonlist.R;
+import com.sjapps.jsonlist.databinding.ActivityAboutBinding;
+import com.sjapps.jsonlist.databinding.FeedbackDialogBinding;
 import com.sjapps.library.customdialog.BasicDialog;
 import com.sjapps.library.customdialog.CustomViewDialog;
 import com.sjapps.library.customdialog.DialogButtonEvents;
@@ -50,18 +55,19 @@ import java.util.List;
 
 public class AboutActivity extends AppCompatActivity {
 
-    private static final String SITE_APP_VERSIONS = "https://slavce14.github.io/redirect?link=jsonlist-app-versions";
-    private static final String RELEASE_NOTES_URL = "https://slavce14.github.io/apps/JsonList/changelogs.json";
-    private static final String SITE_FDroid = "https://slavce14.github.io/redirect?link=jsonlist-fdroid";
-    private static final String SITE_IzzyOnDroid = "https://slavce14.github.io/redirect?link=jsonlist-izzy";
+    private static final String SITE_APP_VERSIONS = "https://redirect.sj14apps.com/jsonlist-app-versions";
+    private static final String RELEASE_NOTES_URL = "https://redirect.sj14apps.com/jsonlist-changelogs";
+    private static final String SITE_FDroid = "https://redirect.sj14apps.com/jsonlist-fdroid";
+    private static final String SITE_IzzyOnDroid = "https://redirect.sj14apps.com/jsonlist-izzy";
     private static final String SITE_PlayStore = "https://play.google.com/store/apps/details?id=com.sjapps.jsonlist";
     private static final String GITHUB_REPOSITORY_RELEASES = "https://github.com/SlaVcE14/JsonList/releases";
     final String STORE_PACKAGE_NAME = "com.sjapps.sjstore";
-    final String CONTACT_MAIL = "slavce14.apps@gmail.com";
+    final String CONTACT_MAIL = "info@sj14apps.com";
 
-    ImageView logo;
-    NestedScrollView nestedScrollView;
-    RecyclerView ListRV,LibListRV;
+    private ActivityAboutBinding binding;
+
+    ArrayAdapter<CharSequence> feedbackCategories;
+
     ArrayList<AboutListItem> appInfoItems = new ArrayList<>();
     ArrayList<AboutListItem> libsItems;
     boolean isStoreInstalled;
@@ -73,24 +79,25 @@ public class AboutActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_about);
+        binding = ActivityAboutBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
         initialize();
         setLayoutBounds();
         Animation animation = AnimationUtils.loadAnimation(this, R.anim.slide_from_bottom);
-        nestedScrollView.startAnimation(animation);
+        binding.nestedList.startAnimation(animation);
         PackageManager manager = getPackageManager();
         try {
             ApplicationInfo applicationInfo = manager.getApplicationInfo(getPackageName(), 0);
-            logo.setImageDrawable(applicationInfo.loadIcon(manager));
+            binding.logo.setImageDrawable(applicationInfo.loadIcon(manager));
 
             String Name = (String) manager.getApplicationLabel(applicationInfo);
             String Version = manager.getPackageInfo(getPackageName(), 0).versionName;
 
-            appInfoItems.add(new AboutListItem(getString(R.string.name),Name));
-            appInfoItems.add(new AboutListItem(getString(R.string.version),Version));
+            appInfoItems.add(new AboutListItem(getString(R.string.name), Name));
+            appInfoItems.add(new AboutListItem(getString(R.string.version), Version));
             libsItems = new LibraryList().getItems(this);
-            setupList(appInfoItems,ListRV);
-            setupList(libsItems,LibListRV);
+            setupList(appInfoItems, binding.aboutList);
+            setupList(libsItems, binding.LibrariesList);
 
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
@@ -99,7 +106,7 @@ public class AboutActivity extends AppCompatActivity {
     }
 
     private void setLayoutBounds() {
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.rootView), (v, windowInsets) -> {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.rootView, (v, windowInsets) -> {
             Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
             Insets insetsN = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout());
 
@@ -108,8 +115,8 @@ public class AboutActivity extends AppCompatActivity {
             layoutParams.leftMargin = insets.left + insetsN.left;
             layoutParams.topMargin = insets.top;
             layoutParams.rightMargin = insets.right + insetsN.right;
-            View scrollRL = findViewById(R.id.scrollRL);
-            scrollRL.setPadding(scrollRL.getPaddingLeft(),scrollRL.getPaddingTop(),scrollRL.getPaddingRight(),insets.bottom + insetsN.bottom);
+            View scrollRL = binding.scrollRL;
+            scrollRL.setPadding(scrollRL.getPaddingLeft(), scrollRL.getPaddingTop(), scrollRL.getPaddingRight(), insets.bottom + insetsN.bottom);
             v.setLayoutParams(layoutParams);
             return WindowInsetsCompat.CONSUMED;
         });
@@ -122,12 +129,8 @@ public class AboutActivity extends AppCompatActivity {
         view.setLayoutManager(new LinearLayoutManager(this));
     }
 
-    void initialize(){
-        logo = findViewById(R.id.logo);
-        ListRV = findViewById(R.id.aboutList);
-        LibListRV = findViewById(R.id.LibrariesList);
-        nestedScrollView = findViewById(R.id.nestedList);
-        if (CheckStoreIsInstalled()){
+    void initialize() {
+        if (CheckStoreIsInstalled()) {
             isStoreInstalled = true;
         }
     }
@@ -136,10 +139,10 @@ public class AboutActivity extends AppCompatActivity {
         ListDialog dialog = new ListDialog();
 
         ArrayList<ImageListItem> items = new ArrayList<>();
-        items.add(new ImageListItem("Site", AppCompatResources.getDrawable(this,R.drawable.ic_globe), (ImageItemClick) this::openSite));
-        items.add(new ImageListItem("GitHub", AppCompatResources.getDrawable(this,R.drawable.github_logo), (ImageItemClick) this::openGitHub));
-        items.add(new ImageListItem("Play Store", AppCompatResources.getDrawable(this,R.drawable.play_store_logo_com), (ImageItemClick) this::openPlayStore));
-        items.add(new ImageListItem("F-Droid", AppCompatResources.getDrawable(this,R.drawable.fdroid_logo), (ImageItemClick) this::openFDroid));
+        items.add(new ImageListItem("Site", AppCompatResources.getDrawable(this, R.drawable.ic_globe), (ImageItemClick) this::openSite));
+        items.add(new ImageListItem("GitHub", AppCompatResources.getDrawable(this, R.drawable.github_logo), (ImageItemClick) this::openGitHub));
+        items.add(new ImageListItem("Play Store", AppCompatResources.getDrawable(this, R.drawable.play_store_logo_com), (ImageItemClick) this::openPlayStore));
+        items.add(new ImageListItem("F-Droid", AppCompatResources.getDrawable(this, R.drawable.fdroid_logo), (ImageItemClick) this::openFDroid));
         items.add(new ImageListItem("IzzyOnDroid", AppCompatResources.getDrawable(this, R.drawable.izzyondroid_logo), (ImageItemClick) this::openIzzy));
 
         if (isStoreInstalled) {
@@ -147,7 +150,7 @@ public class AboutActivity extends AppCompatActivity {
         }
 
 
-        dialog.Builder(this,true)
+        dialog.Builder(this, true)
                 .setTitle("Open...")
                 .setImageItems(items, (position, obj) -> {
                     if (obj.getData() == null)
@@ -162,32 +165,32 @@ public class AboutActivity extends AppCompatActivity {
         openLink(SITE_PlayStore);
     }
 
-    private void openGitHub(){
+    private void openGitHub() {
         openLink(GITHUB_REPOSITORY_RELEASES);
     }
 
-    private void openSite(){
+    private void openSite() {
         openLink(SITE_APP_VERSIONS);
     }
 
-    private void openFDroid(){
+    private void openFDroid() {
         openLink(SITE_FDroid);
     }
 
-    private void openIzzy(){
+    private void openIzzy() {
         openLink(SITE_IzzyOnDroid);
     }
 
-    private void openLink(String site){
+    private void openLink(String site) {
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(site));
         startActivity(intent);
     }
 
-    private void openStore(){
+    private void openStore() {
         Intent intent = new Intent();
-        intent.setComponent(new ComponentName(STORE_PACKAGE_NAME,STORE_PACKAGE_NAME + ".AppActivity"));
+        intent.setComponent(new ComponentName(STORE_PACKAGE_NAME, STORE_PACKAGE_NAME + ".AppActivity"));
         intent.putExtra("packageName", getPackageName());
-        intent.putExtra("isInstalled",true);
+        intent.putExtra("isInstalled", true);
         startActivity(intent);
     }
 
@@ -201,11 +204,64 @@ public class AboutActivity extends AppCompatActivity {
             return false;
         }
     }
-
     public void SendFeedback(View view) {
+        FeedbackDialogBinding dialogBinding = FeedbackDialogBinding.inflate(LayoutInflater.from(this));
+
+        feedbackCategories = ArrayAdapter.createFromResource(this, R.array.feedback_categories, android.R.layout.simple_spinner_item);
+        feedbackCategories.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        dialogBinding.categorySpinner.setAdapter(feedbackCategories);
+
+        dialogBinding.categorySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (position != 0){
+                    dialogBinding.feedbackTxt.setVisibility(View.VISIBLE);
+                    focusEditText(dialogBinding.feedbackTxt);
+                }
+                else dialogBinding.feedbackTxt.setVisibility(View.GONE);
+                focusEditText(dialogBinding.feedbackTxt);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        CustomViewDialog dialog = new CustomViewDialog();
+        dialog.Builder(this, true)
+                .setTitle(getString(R.string.feedback_dialog_title))
+                .setMessage(getString(R.string.feedback_dialog_message))
+                .setMessageAlignment(SJDialog.TEXT_ALIGNMENT_CENTER)
+                .addCustomView(dialogBinding.getRoot())
+                .dialogWithTwoButtons()
+                .setRightButtonText(getString(R.string.send))
+                .onButtonClick(() -> {
+                    validateAndSend(dialog,dialogBinding.categorySpinner.getSelectedItemPosition(),dialogBinding.feedbackTxt.getText().toString());
+                })
+                .show();
+    }
+
+    private void validateAndSend(SJDialog dialog,int category ,String text){
+        if (category == 0){
+            Toast.makeText(this, R.string.select_category,Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (text.isEmpty()){
+            Toast.makeText(this, R.string.empty_text_field,Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        sendDeviceInfo(feedbackCategories.getItem(category),text);
+
+        dialog.dismiss();
+    }
+
+    private void sendDeviceInfo(CharSequence category, String text) {
 
         BasicDialog dialog = new BasicDialog();
-        dialog.Builder(this,true)
+        dialog.Builder(this, true)
                 .setTitle(getString(R.string.include_info))
                 .setMessage(getString(R.string.include_info_description))
                 .setLeftButtonText(getString(R.string.no))
@@ -214,30 +270,38 @@ public class AboutActivity extends AppCompatActivity {
                 .onButtonClick(new DialogButtonEvents() {
                     @Override
                     public void onLeftButtonClick() {
-                        sendMail(false);
+                        sendFeedbackMail(category,text,false);
                         dialog.dismiss();
                     }
 
                     @Override
                     public void onRightButtonClick() {
-                        sendMail(true);
+                        sendFeedbackMail(category,text,true);
                         dialog.dismiss();
                     }
                 })
                 .show();
     }
 
-    private void sendMail(boolean sendInfo){
+    public void sendFeedbackMail(CharSequence category, String text, boolean sendInfo) {
         Intent intent = new Intent(Intent.ACTION_SENDTO);
         intent.setData(Uri.parse("mailto:"));
-        intent.putExtra(Intent.EXTRA_EMAIL,new String[]{CONTACT_MAIL});
-        intent.putExtra(Intent.EXTRA_SUBJECT,"Json List Feedback:");
+        intent.putExtra(Intent.EXTRA_EMAIL, new String[]{CONTACT_MAIL});
+        intent.putExtra(Intent.EXTRA_SUBJECT, "Json List Feedback: " + category);
         if (sendInfo)
-            intent.putExtra(Intent.EXTRA_TEXT,getInfo());
+            intent.putExtra(Intent.EXTRA_TEXT, getInfo() + "\n" + text);
+        else intent.putExtra(Intent.EXTRA_TEXT, text);
+
         startActivity(intent);
     }
 
-    private String getInfo(){
+    private void focusEditText(EditText editText) {
+        editText.requestFocus();
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT);
+    }
+
+    private String getInfo() {
         String s = "";
         try {
             PackageInfo pInfo = getPackageManager().getPackageInfo(
@@ -245,7 +309,8 @@ public class AboutActivity extends AppCompatActivity {
             s += "\n App Version Name: " + pInfo.versionName;
             s += "\n App Version Code: " + pInfo.versionCode;
             s += "\n";
-        } catch (PackageManager.NameNotFoundException ignored) {}
+        } catch (PackageManager.NameNotFoundException ignored) {
+        }
         s += "\n OS API Level: " + Build.VERSION.SDK_INT;
         s += "\n Manufacturer: " + Build.MANUFACTURER;
         s += "\n Model (and Product): " + Build.MODEL + " (" + Build.PRODUCT + ")";
@@ -271,7 +336,7 @@ public class AboutActivity extends AppCompatActivity {
                 textView.setText(R.string.loading);
                 textView.setTextAlignment(TextView.TEXT_ALIGNMENT_CENTER);
                 scrollView.addView(textView);
-                dialog.Builder(AboutActivity.this,true)
+                dialog.Builder(AboutActivity.this, true)
                         .setTitle(getString(R.string.release_notes))
                         .addCustomView(scrollView)
                         .onDismissListener(dialog1 -> {
@@ -289,21 +354,30 @@ public class AboutActivity extends AppCompatActivity {
             public void onResponse(String data) {
                 Type listType = new TypeToken<List<ReleaseNote>>() {}.getType();
 
-                List<ReleaseNote> releasesHistory = new Gson().fromJson(data,listType);
+                List<ReleaseNote> releasesHistory;
+                try {
+                    releasesHistory = new Gson().fromJson(data, listType);
+                }catch (Exception e){
+                    handler.post(() -> {
+                        Toast.makeText(AboutActivity.this, getResources().getText(R.string.fail_to_get_data), Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                    });
+                    return;
+                }
                 if (releasesHistory == null)
                     return;
 
                 StringBuilder stringBuilder = new StringBuilder();
-                for (ReleaseNote note : releasesHistory){
+                for (ReleaseNote note : releasesHistory) {
                     stringBuilder.append("<h3>").append(note.title).append("</h3>");
-                    stringBuilder.append(note.changelog.replaceAll("\n","<br>")).append("<br>");
+                    stringBuilder.append(note.changelog.replaceAll("\n", "<br>")).append("<br>");
                     stringBuilder.append("<br><br>");
                 }
 
 
                 handler.post(() -> {
                     textView.setTextAlignment(TextView.TEXT_ALIGNMENT_TEXT_START);
-                    textView.setText(HtmlCompat.fromHtml(stringBuilder.toString(),HtmlCompat.FROM_HTML_MODE_LEGACY));
+                    textView.setText(HtmlCompat.fromHtml(stringBuilder.toString(), HtmlCompat.FROM_HTML_MODE_LEGACY));
 
                 });
             }
@@ -311,7 +385,7 @@ public class AboutActivity extends AppCompatActivity {
             @Override
             public void onFailure() {
                 handler.post(() -> {
-                    Toast.makeText(AboutActivity.this, getResources().getText(R.string.fail_to_get_data),Toast.LENGTH_SHORT).show();
+                    Toast.makeText(AboutActivity.this, getResources().getText(R.string.fail_to_get_data), Toast.LENGTH_SHORT).show();
                     dialog.dismiss();
                 });
 
@@ -330,4 +404,6 @@ public class AboutActivity extends AppCompatActivity {
     public void Back(View view) {
         finish();
     }
+
+
 }

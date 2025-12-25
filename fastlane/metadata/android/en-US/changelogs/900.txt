@@ -1,0 +1,14 @@
+Bugfix
+- Fixed an issue where overwriting a file could result in invalid JSON
+- Fixed bug when large data tries to display in raw JSON View  
+
+Optimization
+- Working with large data is more faster
+
+New
+- Added toggle for scroll animation in settings
+
+Updates
+- Update feedback dialog
+- Handle numbers with leading zeros as strings
+- Improve search UX and UI feedback
