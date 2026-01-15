@@ -35,16 +35,13 @@ import android.util.Log;
 import android.util.TypedValue;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -58,6 +55,7 @@ import com.sjapps.about.AboutActivity;
 import com.sjapps.adapters.ListAdapter;
 import com.sjapps.adapters.PathListAdapter;
 import com.sjapps.jsonlist.controllers.AndroidDragAndDrop;
+import com.sjapps.jsonlist.controllers.AndroidEditController;
 import com.sjapps.jsonlist.controllers.AndroidFileManager;
 import com.sjapps.jsonlist.controllers.AndroidJsonLoader;
 import com.sjapps.jsonlist.controllers.AndroidRawJsonView;
@@ -70,12 +68,9 @@ import com.sj14apps.jsonlist.core.JsonData;
 import com.sj14apps.jsonlist.core.ListItem;
 import com.sjapps.jsonlist.controllers.AndroidSearchController;
 import com.sjapps.jsonlist.databinding.ActivityMainBinding;
-import com.sjapps.jsonlist.databinding.EditItemBinding;
 import com.sjapps.library.customdialog.BasicDialog;
-import com.sjapps.library.customdialog.CustomViewDialog;
 import com.sjapps.library.customdialog.DialogButtonEvents;
 import com.sjapps.library.customdialog.ListDialog;
-import com.sjapps.library.customdialog.MessageDialog;
 import com.sjapps.logs.CustomExceptionHandler;
 import com.sjapps.logs.LogActivity;
 
@@ -84,7 +79,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -93,26 +87,24 @@ public class MainActivity extends AppCompatActivity {
     public ActivityMainBinding binding;
 
     public JsonData data = new JsonData();
-    ListAdapter adapter;
+    public ListAdapter adapter;
     PathListAdapter pathAdapter;
     public AutoTransition autoTransition = new AutoTransition();
     public Handler handler = new Handler();
     public Thread readFileThread;
     public AppState state;
     int listPrevDx = 0;
-    RawJsonView rawJsonView;
+    public RawJsonView rawJsonView;
     FileManager fileManager;
     WebManager webManager;
     JsonLoader jsonLoader;
     public SearchController searchController;
+    public AndroidEditController editController;
 
     public boolean isVertical = true;
     public boolean isUrlSearching;
     boolean isMenuOpen;
     boolean isTopMenuVisible;
-    boolean isEdited;
-    boolean isApplyingChanges;
-    public boolean isEditMode;
     public boolean isLoading;
     public boolean unsavedChanges;
 
@@ -214,6 +206,7 @@ public class MainActivity extends AppCompatActivity {
         fileManager = new AndroidFileManager(this,handler);
         jsonLoader = new AndroidJsonLoader(this);
         searchController = new AndroidSearchController(this);
+        editController = new AndroidEditController(this);
 
         new AndroidDragAndDrop(this, dragAndDropCallback);
 
@@ -303,7 +296,7 @@ public class MainActivity extends AppCompatActivity {
         binding.splitViewBtn.setOnClickListener(view -> rawJsonView.toggleSplitView());
         binding.filterBtn.setOnClickListener(view -> filter());
         binding.searchBtn.setOnClickListener(view -> searchController.showSearchView());
-        binding.editBtn.setOnClickListener(view -> toggleEdit());
+        binding.editBtn.setOnClickListener(view -> editController.toggleEdit());
         binding.saveBtn.setOnClickListener(view -> saveChanges());
 
         FrameLayout resizeSplitViewBtn = binding.resizeSplitViewBtn;
@@ -353,55 +346,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-
-
-    private void toggleEdit() {
-        if (adapter == null)
-            return;
-
-        isEditMode = !adapter.isEditMode();
-
-        if (isEditMode){
-            showBackBtn();
-            hideToolbar();
-            binding.menuBtn.setVisibility(INVISIBLE);
-            binding.splitViewBtn.setVisibility(INVISIBLE);
-            binding.saveBtn.setVisibility(INVISIBLE);
-        }
-        else {
-            binding.menuBtn.setVisibility(VISIBLE);
-            binding.splitViewBtn.setVisibility(VISIBLE);
-            hideBackBtnIfNotNeeded();
-
-            if (isEdited){
-                loadingStarted(getString(R.string.applying_changes));
-                isApplyingChanges = true;
-                new Thread(() -> {
-                    if (!data.getRawData().equals("-1"))
-                        data.setRawData(JsonFunctions.convertToRawString(data.getRootList()));
-                    handler.post(()->{
-                        loadingFinished(true);
-                        isEdited = false;
-                        rawJsonView.isRawJsonLoaded = false;
-                        unsavedChanges = true;
-                        isApplyingChanges = false;
-                        binding.saveBtn.setVisibility(VISIBLE);
-                        if (rawJsonView.showJson){
-                            rawJsonView.ShowJSON();
-                        }
-                        showToolbar();
-                    });
-                }).start();
-
-            }else if (unsavedChanges)
-                binding.saveBtn.setVisibility(VISIBLE);
-        }
-
-        adapter.setEditMode(isEditMode);
-        adapter.notifyItemRangeChanged(0,adapter.getItemCount());
-        binding.messageLL.setVisibility(isEditMode ? VISIBLE: GONE);
-    }
-
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
@@ -427,8 +371,8 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            if (isEditMode){
-                toggleEdit();
+            if (editController.isEditMode){
+                editController.toggleEdit();
                 return;
             }
 
@@ -579,10 +523,10 @@ public class MainActivity extends AppCompatActivity {
         startActivity(new Intent(MainActivity.this, LogActivity.class));
     }
 
-    private void showToolbar() {
-        if (isEditMode)
+    public void showToolbar() {
+        if (editController.isEditMode)
             return;
-        if (isApplyingChanges)
+        if (editController.isApplyingChanges)
             return;
         if ((readFileThread != null && readFileThread.isAlive()) || isUrlSearching)
             return;
@@ -603,7 +547,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void hideToolbar() {
+    public void hideToolbar() {
         binding.floatingToolbar.animate().cancel();
 
         isTopMenuVisible = false;
@@ -758,13 +702,13 @@ public class MainActivity extends AppCompatActivity {
                 (adapter != null && adapter.isEditMode());
     }
 
-    private void showBackBtn() {
+    public void showBackBtn() {
         if (binding.backBtn.getVisibility() == VISIBLE)
             return;
         binding.backBtn.setVisibility(VISIBLE);
     }
 
-    private void hideBackBtnIfNotNeeded() {
+    public void hideBackBtnIfNotNeeded() {
         if (data.isEmptyPath())
             binding.backBtn.setVisibility(GONE);
     }
@@ -801,7 +745,7 @@ public class MainActivity extends AppCompatActivity {
         binding.list.setAdapter(adapter);
     }
 
-    private void updateFilterList(ArrayList<ListItem> items) {
+    public void updateFilterList(ArrayList<ListItem> items) {
         filterList.clear();
         for (ListItem item : items){
             if (!item.isSpace() && item.getName() != null)
@@ -816,7 +760,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void showHidePathList() {
 
-        if (isEditMode)
+        if (editController.isEditMode)
             return;
 
         if (binding.searchLL.getVisibility() == VISIBLE)
@@ -1183,7 +1127,7 @@ public class MainActivity extends AppCompatActivity {
                 Snackbar.make(getWindow().getDecorView(), R.string.loading_file_in_progress, BaseTransientBottomBar.LENGTH_SHORT).show();
                 return true;
             }
-            if (isEditMode){
+            if (editController.isEditMode){
                 Snackbar.make(getWindow().getDecorView(), R.string.editing_in_progress, BaseTransientBottomBar.LENGTH_SHORT).show();
                 return true;
             }
@@ -1228,91 +1172,10 @@ public class MainActivity extends AppCompatActivity {
             });
 
     public void editItem(int pos) {
-        EditItemBinding editItemBinding = EditItemBinding.inflate(LayoutInflater.from(this));
-
-        ListItem item = adapter.getList().get(pos);
-
-        if (item.isRootItem()) {
-            MessageDialog dialog = new MessageDialog();
-            dialog.Builder(this,true)
-                    .setTitle(getString(R.string.editing_root_item_not_available))
-                    .show();
-            return;
-        }
-
-        EditText nameTxt = editItemBinding.NameTxt;
-        EditText valueTxt = editItemBinding.ValueTxt;
-
-        if (item.getName() == null) {
-            editItemBinding.nameLL.setVisibility(GONE);
-        }else nameTxt.setText(adapter.getList().get(pos).getName());
-
-        if (item.isArray() || item.isObject()) {
-            editItemBinding.valueLL.setVisibility(GONE);
-        }else valueTxt.setText(adapter.getList().get(pos).getValue());
-
-        CustomViewDialog dialog = new CustomViewDialog();
-        dialog.Builder(this, true)
-                .dialogWithTwoButtons()
-                .setTitle(getString(R.string.edit_item))
-                .addCustomView(editItemBinding.getRoot())
-                .onButtonClick(() -> {
-
-                    if (item.getName() != null){
-                        String name = nameTxt.getText().toString();
-                        String oldName = item.getName();
-
-                        for(ListItem i : item.getParentList()){
-                            if (i.getName().equals(name) && i != item){
-                                dialog.dismiss();
-                                new MessageDialog().Builder(this,true)
-                                        .setTitle(getString(R.string.item_with_name_already_exists))
-                                        .onDismissListener(d-> dialog.show())
-                                        .show();
-                                return;
-                            }
-                        }
-                        if (!oldName.equals(name)){
-                            isEdited = true;
-                            if (adapter.itemCountInJSONList > 1) editAllItemsWithSameKey(oldName,name,item);
-                        }
-
-                        item.setName(name);
-                    }
-
-                    if (!item.isArray() && !item.isObject()){
-                        String value = valueTxt.getText().toString();
-                        if (!item.getValue().equals(value))
-                            isEdited = true;
-                        item.setValue(value);
-                    }
-
-                    dialog.dismiss();
-                    adapter.notifyItemChanged(pos);
-                    updateFilterList(data.getCurrentList());
-                })
-                .show();
-        Objects.requireNonNull(dialog.dialog.getWindow()).setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
-    }
-
-    private void editAllItemsWithSameKey(String oldName, String name, ListItem item){
-        BasicDialog renameAllDialog = new BasicDialog();
-        renameAllDialog.Builder(this,true)
-                .setTitle(getString(R.string.rename_all))
-                .setMessage(String.format(getString(R.string.rename_all_s_key_with_s),oldName,name))
-                .onButtonClick(() -> {
-                    for (ListItem listItem : adapter.getList()){
-                        if (listItem.getName() != null && listItem.getName().equals(oldName) && listItem != item){
-                            listItem.setName(name);
-                            adapter.notifyItemRangeChanged(0,adapter.getItemCount());
-                        }
-                    }
-                    renameAllDialog.dismiss();
-                })
-                .show();
+        editController.editItem(pos, adapter.getList().get(pos));
     }
 
     public void DoneEdit(View view) {
-        toggleEdit();
+        editController.toggleEdit();
     }
 }
