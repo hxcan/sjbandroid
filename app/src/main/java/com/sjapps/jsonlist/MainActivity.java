@@ -33,6 +33,7 @@ import android.transition.AutoTransition;
 import android.transition.TransitionManager;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.DragAndDropPermissions;
 import android.view.HapticFeedbackConstants;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -141,7 +142,7 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = getIntent();
         Log.d(TAG, "onCreate: " + intent);
         if (Intent.ACTION_VIEW.equals(intent.getAction())) {
-            ReadFile(intent.getData());
+            ReadFile(intent.getData(),null);
         }
         if (intent.getAction().equals("android.intent.action.OPEN_FILE")){
             fileManager.importFromFile();
@@ -862,7 +863,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    void ReadFile(Uri uri){
+    void ReadFile(Uri uri, FileManager.FileReadingCallback callback){
         if ((readFileThread != null && readFileThread.isAlive()) || isUrlSearching){
             return;
         }
@@ -876,6 +877,7 @@ public class MainActivity extends AppCompatActivity {
                 AssetFileDescriptor fileDescriptor = getContentResolver().openAssetFileDescriptor(uri, "r");
                 if (fileDescriptor == null) {
                     handler.post(fileCallback::onFileLoadFailed);
+                    if (callback != null) handler.post(callback::onFileReadingFinished);
                     return;
                 }
 
@@ -885,11 +887,12 @@ public class MainActivity extends AppCompatActivity {
                 fileDescriptor.close();
 
                 fileManager.readFile(inputStream, fileName , fileSize, fileCallback);
-
+                if (callback != null) handler.post(callback::onFileReadingFinished);
 
             } catch (IOException e) {
                 e.printStackTrace();
                 handler.post(fileCallback::onFileLoadFailed);
+                if (callback != null) handler.post(callback::onFileReadingFinished);
             }
         });
         readFileThread.setName("readFileThread");
@@ -1136,8 +1139,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onDrop(Uri uri) {
-            ReadFile(uri);
+        public void onDrop(Uri uri, DragAndDropPermissions permissions) {
+            ReadFile(uri, () -> {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && permissions != null)
+                    permissions.release();
+            });
         }
     };
 
@@ -1155,7 +1161,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 //File
-                ReadFile(result.getData().getData());
+                ReadFile(result.getData().getData(),null);
             });
 
     public ActivityResultLauncher<Intent> ActivityResultSaveData = registerForActivityResult(
