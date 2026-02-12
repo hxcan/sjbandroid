@@ -1,12 +1,13 @@
 package com.sj14apps.jsonlist.core;
 
 public class AppState {
+    public int settingsVersion;
     boolean hasNewCrash;
     boolean hasCrashLogs;
     boolean MIMEFilterDisabled;
     boolean syntaxHighlighting = true;
     boolean scrollAnimation = true;
-    boolean autoCheckForUpdate;
+    boolean autoCheckForUpdate = true;
     private int theme;
     long lastCheckForUpdate;
     boolean hasNewVersion;
@@ -104,7 +105,8 @@ public class AppState {
     @Override
     public String toString() {
         return "AppState{" +
-                "hasNewCrash=" + hasNewCrash +
+                "settingsVersion=" + settingsVersion +
+                ", hasNewCrash=" + hasNewCrash +
                 ", hasCrashLogs=" + hasCrashLogs +
                 ", MIMEFilterDisabled=" + MIMEFilterDisabled +
                 ", syntaxHighlighting=" + syntaxHighlighting +
