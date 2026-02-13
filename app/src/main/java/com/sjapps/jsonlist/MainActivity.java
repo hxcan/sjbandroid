@@ -516,6 +516,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void checkHasNewVersion() {
+        if (!state.isAutoCheckForUpdate())
+            return;
+
         long currentSeconds = System.currentTimeMillis()/1000;
 
         TypedValue typedValue = new TypedValue();
