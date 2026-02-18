@@ -2,21 +2,7 @@ plugins {
     id 'com.android.application'
 }
 
-def localProperties = new Properties()
-def localPropertiesFile = rootProject.file("local.properties")
-if (localPropertiesFile.exists()) {
-    localProperties.load(new FileInputStream(localPropertiesFile))
-}
-
 android {
-    signingConfigs {
-        debug {
-            storeFile file(localProperties.getProperty('APP_KEY_FILE'))
-            storePassword localProperties.getProperty('APP_STORE_PASSWORD')
-            keyAlias localProperties.getProperty('APP_KEY_ALIAS')
-            keyPassword localProperties.getProperty('APP_KEY_PASSWORD')
-        }
-    }
     compileSdk 36
 
     defaultConfig {
