@@ -32,7 +32,8 @@ android {
     // Signing configuration for debug and release builds
     signingConfigs {
         debug {
-            storeFile file('keystore.31/debug.keystore')
+            // Use project.rootDir to reference root-level keystore
+            storeFile file("${project.rootDir}/keystore.31/debug.keystore")
             storePassword 'android'
             keyAlias 'androiddebugkey'
             keyPassword 'android'
