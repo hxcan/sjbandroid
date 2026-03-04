@@ -5,6 +5,8 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  release:
+    types: [published]
 
 env:
   GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx2048m"
@@ -43,12 +45,37 @@ jobs:
       run: ./gradlew assembleDebug
 
     - name: Build Release APK (with signing)
-      run: ./gradlew assembleRelease
+      if: github.event_name == 'release' || github.ref_type == 'tag'
+      env:
+        SIGNING_KEY_STORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        SIGNING_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+        SIGNING_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+        SIGNING_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+      run: |
+        # 解码 Base64 存储的 keystore
+        echo "$SIGNING_KEY_STORE_BASE64" | base64 -d > app-release-key.keystore
+        
+        # 执行 Release Build，使用正式证书
+        ./gradlew assembleRelease \
+          -PksFile=app-release-key.keystore \
+          -PksPass="$SIGNING_STORE_PASSWORD" \
+          -PkaAlias="$SIGNING_KEY_ALIAS" \
+          -PkaPass="$SIGNING_KEY_PASSWORD"
+        
+        # 清理临时密钥文件
+        rm -f app-release-key.keystore
+
+    - name: Build Release APK (fallback for manual triggers)
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       env:
         SIGNING_KEY_STORE_PATH: keystore.31/debug.keystore
-        # Note: For production releases, use GitHub Secrets instead of hardcoding
-        # GITHUB_TOKEN should be used for uploading artifacts
-        # KEYSTORE_PASSWORD, KEY_ALIAS, etc. should come from secrets
+      run: |
+        # 注意：此模式仅用于测试，生产环境请使用 GitHub Secrets
+        ./gradlew assembleRelease \
+          -PksFile=keystore.31/debug.keystore \
+          -PksPass=test123456 \
+          -PkaAlias=testkey \
+          -PkaPass=test123456
 
     - name: Upload Debug APK Artifact
       uses: actions/upload-artifact@v4
@@ -64,9 +91,19 @@ jobs:
         path: app/build/outputs/apk/release/app-release.apk
         retention-days: 30
 
+    - name: Upload Signed APK to Release
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: app/build/outputs/apk/release/app-release.apk
+        asset_name: sjbandroid-${{ github.event.release.tag_name }}.apk
+        asset_content_type: application/vnd.android.package-archive
+
     - name: Send Failure Notification (Placeholder)
       if: failure()
       run: |
         echo "Build failed! Check logs at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         # TODO: Implement email or DingTalk notification here
-        # Example: curl -d "Build failed in ${{ github.repository }}" https://webhook.url
